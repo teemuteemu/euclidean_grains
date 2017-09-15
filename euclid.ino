@@ -1,3 +1,6 @@
+#include "defs.h"
+#include "bjorklund.h"
+
 #define POT1          (2)
 #define POT2          (1)
 #define POT3          (0)
@@ -8,21 +11,17 @@
 #define PWM_INTERRUPT TIMER2_OVF_vect
 
 #define POT_MAX       (590)
-#define RHYTM_LENGTH  (16)
-
-struct Euclidean {
-  uint8_t steps;
-  uint8_t hits;
-  uint8_t offset;
-};
 
 Euclidean rhytm;
 Euclidean rhytmTemp;
+
+bool pattern[RHYTM_LENGTH];
 
 uint16_t potTemp;
 uint16_t output;
 uint16_t gate;
 bool gateHigh;
+bool running;
 uint8_t index;
 
 void setup() {
@@ -38,11 +37,13 @@ void setup() {
   index = 0;
 
   rhytm.steps = 16;
-  rhytm.hits = 4;
+  rhytm.pulses = 4;
   rhytm.offset = 0;
   rhytmTemp.steps = rhytm.steps;
-  rhytmTemp.hits = rhytm.hits;
+  rhytmTemp.pulses = rhytm.pulses;
   rhytmTemp.offset = rhytm.offset;
+
+  getPattern(pattern);
 
   Serial.begin(9600);
 }
@@ -58,11 +59,11 @@ uint8_t readPot(uint8_t pot, uint8_t _max) {
 
 void handlePots() {
   rhytmTemp.steps = readPot(POT1, RHYTM_LENGTH - 1);
-  rhytmTemp.hits = readPot(POT2, rhytm.steps);
+  rhytmTemp.pulses = readPot(POT2, rhytm.steps);
   rhytmTemp.offset = readPot(POT3, RHYTM_LENGTH - 1);
 
   if (rhytmTemp.steps != rhytm.steps
-    || rhytmTemp.hits != rhytm.hits
+    || rhytmTemp.pulses != rhytm.pulses
     || rhytmTemp.offset != rhytm.offset) {
     updateRhytm(rhytmTemp);
   }
@@ -70,14 +71,35 @@ void handlePots() {
 
 void updateRhytm(Euclidean newRhytm) {
   rhytm.steps = newRhytm.steps;
-  rhytm.hits = newRhytm.hits;
+  rhytm.pulses = newRhytm.pulses;
   rhytm.offset = newRhytm.offset;
 
+  if (!running) {
+    running = true;
+    getPattern(pattern);
+    printPattern(pattern);
+    running = false;
+  }
+
+  /*
   Serial.print(newRhytm.steps);
   Serial.print(" ");
-  Serial.print(newRhytm.hits);
+  Serial.print(newRhytm.pulses);
   Serial.print(" ");
   Serial.println(newRhytm.offset);
+  */
+}
+
+void getPattern(bool pattern[]) {
+  bjorklund(pattern, rhytm);
+}
+
+void printPattern(bool pattern[]) {
+  for (uint8_t i=0; i<=rhytm.steps; i++) {
+    Serial.print(pattern[i]);
+    Serial.print(" ");
+  }
+  Serial.println(" ");
 }
 
 void loop() {
@@ -91,7 +113,7 @@ void loop() {
 
       Serial.print(rhytm.steps);
       Serial.print(" ");
-      Serial.print(rhytm.hits);
+      Serial.print(rhytm.pulses);
       Serial.print(" ");
       Serial.print(rhytm.offset);
       Serial.print(" ");
