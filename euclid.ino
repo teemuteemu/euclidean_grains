@@ -1,3 +1,5 @@
+#include <digitalWriteFast.h>
+
 #include "defs.h"
 #include "bjorklund.h"
 
@@ -6,6 +8,7 @@
 #define POT3          (0)
 #define PIN3          (3)
 
+#define LED_PIN       (13)
 #define PWM_PIN       (11)
 #define PWM_VALUE     OCR2A
 #define PWM_INTERRUPT TIMER2_OVF_vect
@@ -18,23 +21,38 @@ Euclidean rhytmTemp;
 bool pattern[RHYTM_LENGTH];
 
 uint16_t potTemp;
-uint16_t output;
+uint8_t output;
 uint16_t gate;
 bool gateHigh;
 bool running;
 uint8_t index;
+uint8_t prevIndex;
+int8_t noteHighCounter;
 
 void setup() {
-  TCCR2A = _BV(COM2A1) | _BV(WGM20);
-  TCCR2B = _BV(CS20);
-  TIMSK2 = _BV(TOIE2);
+  /*
+  cli();
+  // noInterrupts(); // Interrupts ausschalten
+  TCCR1A = 0; // Timer1 initialisieren
+  TCCR1B = 0;
+  TCNT1 = 0;
+  OCR1A = 512; // Vergleichsregister um die Zeit einzustellen
+  TCCR1B |= (1 << WGM12); // CTC mode
+  TCCR1B |= (1 << CS12); // 256 prescaler
+  TIMSK1 |= (1 << OCIE1A); // enable timer compare interrupt
+  // interrupts(); // Interrupts einschalten
+  sei();
+  */
 
+  pinMode(LED_PIN, OUTPUT);
   pinMode(PWM_PIN, OUTPUT);
 
   output = 0;
   gate = 0;
   gateHigh = false;
   index = 0;
+  prevIndex = index;
+  noteHighCounter = 0;
 
   rhytm.steps = 16;
   rhytm.pulses = 4;
@@ -45,12 +63,32 @@ void setup() {
 
   getPattern(pattern);
 
-  Serial.begin(9600);
+  // Serial.begin(9600);
 }
 
-SIGNAL(PWM_INTERRUPT) {
-  PWM_VALUE = output;
+/*
+ISR(TIMER1_COMPA_vect) { // timer interrupt service routine
+  if (noteHighCounter > 0) {
+    if (--noteHighCounter <= 0) {
+      noteHighCounter = 0;
+      // digitalWriteFast(LED_PIN, HIGH);
+      digitalWriteFast(PWM_PIN, HIGH);
+      return;
+    }
+  }
+
+  if (index != prevIndex) {
+    if (output == HIGH) {
+      noteHighCounter = 8;
+    }
+
+    // digitalWriteFast(LED_PIN, LOW);
+    digitalWriteFast(PWM_PIN, LOW);
+  }
+
+  prevIndex = index;
 }
+*/
 
 uint8_t readPot(uint8_t pot, uint8_t _max) {
   potTemp = analogRead(pot);
@@ -77,17 +115,9 @@ void updateRhytm(Euclidean newRhytm) {
   if (!running) {
     running = true;
     getPattern(pattern);
-    printPattern(pattern);
+    // printPattern(pattern);
     running = false;
   }
-
-  /*
-  Serial.print(newRhytm.steps);
-  Serial.print(" ");
-  Serial.print(newRhytm.pulses);
-  Serial.print(" ");
-  Serial.println(newRhytm.offset);
-  */
 }
 
 void getPattern(bool pattern[]) {
@@ -102,29 +132,47 @@ void printPattern(bool pattern[]) {
   Serial.println(" ");
 }
 
+void printRhytm(Euclidean rhytm) {
+  Serial.print(rhytm.steps);
+  Serial.print(" ");
+  Serial.print(rhytm.pulses);
+  Serial.print(" ");
+  Serial.println(rhytm.offset);
+}
+
 void loop() {
   handlePots();
   gate = analogRead(PIN3);
 
   /*
+  if (noteHighCounter > 0) {
+    if (--noteHighCounter <= 0) {
+      noteHighCounter = 0;
+      digitalWriteFast(PWM_PIN, HIGH);
+      //digitalWriteFast(LED_PIN, HIGH);
+      //return;
+    }
+  }
+  */
+  digitalWriteFast(PWM_PIN, LOW);
+  delay(2);
+
   if (gate > 64) {
     if (!gateHigh) {
       gateHigh = true;
 
-      Serial.print(rhytm.steps);
-      Serial.print(" ");
-      Serial.print(rhytm.pulses);
-      Serial.print(" ");
-      Serial.print(rhytm.offset);
-      Serial.print(" ");
-      Serial.println(index);
-
       if (++index >= (rhytm.steps + 1)) {
         index = 0;
+      }
+
+      if (pattern[(index + rhytm.offset) % rhytm.steps]) {
+        //noteHighCounter = 4;
+        digitalWriteFast(PWM_PIN, HIGH);
+        delay(4);
+        // digitalWriteFast(LED_PIN, HIGH);
       }
     }
   } else {
     gateHigh = false;
   }
-  */
 }
