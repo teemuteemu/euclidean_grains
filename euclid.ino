@@ -26,8 +26,6 @@ uint16_t gate;
 bool gateHigh;
 bool running;
 uint8_t index;
-uint8_t prevIndex;
-int8_t noteHighCounter;
 
 void setup() {
   /*
@@ -51,8 +49,6 @@ void setup() {
   gate = 0;
   gateHigh = false;
   index = 0;
-  prevIndex = index;
-  noteHighCounter = 0;
 
   rhytm.steps = 16;
   rhytm.pulses = 4;
@@ -68,25 +64,6 @@ void setup() {
 
 /*
 ISR(TIMER1_COMPA_vect) { // timer interrupt service routine
-  if (noteHighCounter > 0) {
-    if (--noteHighCounter <= 0) {
-      noteHighCounter = 0;
-      // digitalWriteFast(LED_PIN, HIGH);
-      digitalWriteFast(PWM_PIN, HIGH);
-      return;
-    }
-  }
-
-  if (index != prevIndex) {
-    if (output == HIGH) {
-      noteHighCounter = 8;
-    }
-
-    // digitalWriteFast(LED_PIN, LOW);
-    digitalWriteFast(PWM_PIN, LOW);
-  }
-
-  prevIndex = index;
 }
 */
 
@@ -144,17 +121,8 @@ void loop() {
   handlePots();
   gate = analogRead(PIN3);
 
-  /*
-  if (noteHighCounter > 0) {
-    if (--noteHighCounter <= 0) {
-      noteHighCounter = 0;
-      digitalWriteFast(PWM_PIN, HIGH);
-      //digitalWriteFast(LED_PIN, HIGH);
-      //return;
-    }
-  }
-  */
   digitalWriteFast(PWM_PIN, LOW);
+  // digitalWriteFast(LED_PIN, LOW);
   delay(2);
 
   if (gate > 64) {
@@ -166,10 +134,9 @@ void loop() {
       }
 
       if (pattern[(index + rhytm.offset) % rhytm.steps]) {
-        //noteHighCounter = 4;
         digitalWriteFast(PWM_PIN, HIGH);
-        delay(4);
         // digitalWriteFast(LED_PIN, HIGH);
+        delay(4);
       }
     }
   } else {
