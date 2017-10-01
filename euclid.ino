@@ -1,3 +1,16 @@
+/*
+
+Euclidean sequencer for GinkoSynthese Grains
+
+
+knob 1 - steps
+knob 2 - pulses
+knob 3 - offset
+input 3 - clock in
+output - gate out
+
+*/
+
 #include <digitalWriteFast.h>
 
 #include "defs.h"
@@ -13,7 +26,8 @@
 #define PWM_VALUE     OCR2A
 #define PWM_INTERRUPT TIMER2_OVF_vect
 
-#define POT_MAX       (590)
+// #define POT_MAX       (900)
+#define GT_PW         (30) // ~ms
 
 Euclidean rhytm;
 Euclidean rhytmTemp;
@@ -21,11 +35,12 @@ Euclidean rhytmTemp;
 bool pattern[RHYTM_LENGTH];
 
 uint16_t potTemp;
+uint16_t potMax;
 uint8_t output;
-uint16_t gate;
 bool gateHigh;
 bool running;
 uint8_t index;
+uint8_t patternIndex;
 
 void setup() {
   /*
@@ -46,9 +61,12 @@ void setup() {
   pinMode(PWM_PIN, OUTPUT);
 
   output = 0;
-  gate = 0;
   gateHigh = false;
   index = 0;
+  patternIndex = index;
+
+  potTemp = 0;
+  potMax = 500;
 
   rhytm.steps = 16;
   rhytm.pulses = 4;
@@ -59,7 +77,7 @@ void setup() {
 
   getPattern(pattern);
 
-  // Serial.begin(9600);
+  Serial.begin(9600);
 }
 
 /*
@@ -67,9 +85,18 @@ ISR(TIMER1_COMPA_vect) { // timer interrupt service routine
 }
 */
 
-uint8_t readPot(uint8_t pot, uint8_t _max) {
+uint16_t inline getGate() {
+  return analogRead(PIN3);
+}
+
+uint8_t inline readPot(uint8_t pot, uint8_t _max) {
   potTemp = analogRead(pot);
-  return map(potTemp, 0, POT_MAX, 0, _max);
+
+  if (potTemp > potMax) {
+    potMax = potTemp + 2;
+  }
+
+  return map(potTemp, 0, potMax, 0, _max);
 }
 
 void handlePots() {
@@ -117,27 +144,49 @@ void printRhytm(Euclidean rhytm) {
   Serial.println(rhytm.offset);
 }
 
+/*
+
+  max bpm 300 -> 1/16 note = 50ms
+
+  0       25      50              100
+  _________       _________       _________
+  |       |       |       |       |       | 
+  |       |       |       |       |       |
+  |       |       |       |       |       |
+  |       |       |       |       |       |
+  |       |_______|       |_______|       |_______
+
+  1               2               3 .. 16
+
+  pulse:
+  high 25ms
+  low 25ms
+
+  no-pulse
+  low 50ms
+
+*/
+
 void loop() {
   handlePots();
-  gate = analogRead(PIN3);
 
-  digitalWriteFast(PWM_PIN, LOW);
-  // digitalWriteFast(LED_PIN, LOW);
-  delay(2);
-
-  if (gate > 64) {
+  if (getGate() > 64) {
     if (!gateHigh) {
       gateHigh = true;
 
-      if (++index >= (rhytm.steps + 1)) {
+      if (++index > rhytm.steps) {
         index = 0;
       }
 
-      if (pattern[(index + rhytm.offset) % rhytm.steps]) {
+      patternIndex = (index + rhytm.offset) % (rhytm.steps + 1);
+      if (pattern[patternIndex]) {
         digitalWriteFast(PWM_PIN, HIGH);
-        // digitalWriteFast(LED_PIN, HIGH);
-        delay(4);
+        digitalWriteFast(LED_PIN, HIGH);
+        delay(GT_PW);
       }
+
+      digitalWriteFast(PWM_PIN, LOW);
+      digitalWriteFast(LED_PIN, LOW);
     }
   } else {
     gateHigh = false;
