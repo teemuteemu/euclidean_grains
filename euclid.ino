@@ -2,12 +2,11 @@
 
 Euclidean sequencer for GinkoSynthese Grains
 
-
-knob 1 - steps
-knob 2 - pulses
-knob 3 - offset
-input 3 - clock in
-output - gate out
+pot 1 - steps
+pot 2 - pulses
+pot 3 - offset
+jack 3 - clock in
+jack 4 - gate out
 
 */
 
@@ -16,24 +15,10 @@ output - gate out
 #include "defs.h"
 #include "bjorklund.h"
 
-#define POT1          (2)
-#define POT2          (1)
-#define POT3          (0)
-#define PIN3          (3)
-
-#define LED_PIN       (13)
-#define PWM_PIN       (11)
-#define PWM_VALUE     OCR2A
-#define PWM_INTERRUPT TIMER2_OVF_vect
-
-// #define POT_MAX       (900)
-#define GT_PW         (30) // ~ms
-
 Euclidean rhytm;
 Euclidean rhytmTemp;
 
 bool pattern[RHYTM_LENGTH];
-
 uint16_t potTemp;
 uint16_t potMax;
 uint8_t output;
@@ -43,22 +28,9 @@ uint8_t index;
 uint8_t patternIndex;
 
 void setup() {
-  /*
-  cli();
-  // noInterrupts(); // Interrupts ausschalten
-  TCCR1A = 0; // Timer1 initialisieren
-  TCCR1B = 0;
-  TCNT1 = 0;
-  OCR1A = 512; // Vergleichsregister um die Zeit einzustellen
-  TCCR1B |= (1 << WGM12); // CTC mode
-  TCCR1B |= (1 << CS12); // 256 prescaler
-  TIMSK1 |= (1 << OCIE1A); // enable timer compare interrupt
-  // interrupts(); // Interrupts einschalten
-  sei();
-  */
-
   pinMode(LED_PIN, OUTPUT);
   pinMode(PWM_PIN, OUTPUT);
+  // Serial.begin(9600);
 
   output = 0;
   gateHigh = false;
@@ -76,14 +48,7 @@ void setup() {
   rhytmTemp.offset = rhytm.offset;
 
   getPattern(pattern);
-
-  Serial.begin(9600);
 }
-
-/*
-ISR(TIMER1_COMPA_vect) { // timer interrupt service routine
-}
-*/
 
 uint16_t inline getGate() {
   return analogRead(PIN3);
@@ -143,29 +108,6 @@ void printRhytm(Euclidean rhytm) {
   Serial.print(" ");
   Serial.println(rhytm.offset);
 }
-
-/*
-
-  max bpm 300 -> 1/16 note = 50ms
-
-  0       25      50              100
-  _________       _________       _________
-  |       |       |       |       |       | 
-  |       |       |       |       |       |
-  |       |       |       |       |       |
-  |       |       |       |       |       |
-  |       |_______|       |_______|       |_______
-
-  1               2               3 .. 16
-
-  pulse:
-  high 25ms
-  low 25ms
-
-  no-pulse
-  low 50ms
-
-*/
 
 void loop() {
   handlePots();
