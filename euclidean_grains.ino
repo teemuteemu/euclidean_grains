@@ -21,6 +21,7 @@ Euclidean rhytmTemp;
 bool pattern[RHYTM_LENGTH];
 uint16_t potTemp;
 uint16_t potMax;
+uint8_t potTimer;
 uint8_t output;
 bool gateHigh;
 bool running;
@@ -39,6 +40,7 @@ void setup() {
 
   potTemp = 0;
   potMax = 500;
+  potTimer = 0;
 
   rhytm.steps = 16;
   rhytm.pulses = 4;
@@ -110,7 +112,10 @@ void printRhytm(Euclidean rhytm) {
 }
 
 void loop() {
-  handlePots();
+  if (++potTimer > 10) {
+    handlePots();
+    potTimer = 0;
+  }
 
   if (getGate() > 64) {
     if (!gateHigh) {

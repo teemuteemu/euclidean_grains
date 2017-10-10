@@ -1,5 +1,5 @@
-#ifndef _EUCLIDEAN_H_
-#define _EUCLIDEAN_H_
+#ifndef _DEFS_H_
+#define _DEFS_H_
 
 #define POT1          (2)
 #define POT2          (1)
