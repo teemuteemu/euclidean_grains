@@ -1,6 +1,6 @@
 /*
 
-Euclidean sequencer for GinkoSynthese Grains
+Euclidean sequencer for Ginko Synthese Grains
 
 pot 1 - steps
 pot 2 - pulses
